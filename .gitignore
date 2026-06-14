@@ -1,0 +1,47 @@
+# ─── Build outputs (produced by ./build-jtr-wasm.sh) ──────────────────────────
+/output/
+/build-stage/
+
+# ─── Emscripten / C build artifacts ──────────────────────────────────────────
+*.o
+*.a
+*.bc
+*.gch
+*.lo
+*.la
+a.wasm
+
+# ─── Autoconf-generated products (recreated by `emconfigure ./configure`) ─────
+# These carry machine-specific toolchain paths — never commit them.
+john-bleeding-jumbo/src/Makefile
+john-bleeding-jumbo/src/autoconfig.h
+john-bleeding-jumbo/src/config.status
+john-bleeding-jumbo/src/config.log
+john-bleeding-jumbo/src/config.cache
+john-bleeding-jumbo/src/.deps/
+john-bleeding-jumbo/src/config.sub.orig
+john-bleeding-jumbo/src/config.guess.orig
+# Generated bundled-lib makefiles (each has a tracked Makefile.in template).
+# NB: yescrypt/Makefile is a static source file and is intentionally tracked.
+john-bleeding-jumbo/src/ed25519-donna/Makefile
+john-bleeding-jumbo/src/mbedtls/Makefile
+john-bleeding-jumbo/src/poly1305-donna/Makefile
+john-bleeding-jumbo/src/secp256k1/Makefile
+
+# ─── Built John the Ripper binary + Emscripten payloads in run/ ──────────────
+john-bleeding-jumbo/run/john
+john-bleeding-jumbo/run/john.wasm
+john-bleeding-jumbo/run/john.data
+john-bleeding-jumbo/run/john.bin
+
+# ─── John runtime / session output (created when john runs) ──────────────────
+john-bleeding-jumbo/run/john.pot
+john-bleeding-jumbo/run/john.log
+john-bleeding-jumbo/run/*.rec
+john-bleeding-jumbo/run/*.ses
+
+# ─── OS / editor cruft ───────────────────────────────────────────────────────
+.DS_Store
+*~
+.idea/
+.vscode/

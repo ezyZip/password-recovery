@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>jtr-wasm browser test</title></head>
+<body>
+<h1>jtr-wasm browser test</h1>
+<pre id="log">running…</pre>
+<script>
+const PASSWORD = "hunter2";
+// fast cases (crack near-instantly) + one slow 7z case to observe live progress
+function wl(n){ const a=[]; for(let i=0;i<n;i++) a.push("nope"+i); a.push(PASSWORD); return a.join("\n")+"\n"; }
+const CASES = [
+  { name: "aes.zip",    file: "/fixtures/aes.zip",    wordlist: wl(4),  expectProgress: false },
+  { name: "test.rar",   file: "/fixtures/test.rar",   wordlist: wl(4),  expectProgress: false },
+  { name: "m_lzma2.7z", file: "/fixtures/m_lzma2.7z", wordlist: wl(120), expectProgress: true }, // ~6s @ slow 7z
+];
+const logEl = document.getElementById("log");
+function log(s){ logEl.textContent += "\n" + s; }
+
+function runOne(c){
+  return new Promise(async (resolve) => {
+    const resp = await fetch(c.file);
+    const file = new File([await resp.blob()], c.name);
+    const w = new Worker("/jtr-worker.js");
+    const progress = [];
+    w.onmessage = (e) => {
+      const d = e.data;
+      if (d.progress) { progress.push(d.tried); return; }
+      w.terminate();
+      resolve({ ...d, progressTicks: progress.length, lastTried: progress[progress.length-1] || 0,
+                monotonic: progress.every((v,i)=>i===0||v>=progress[i-1]) });
+    };
+    w.onerror = (e) => { w.terminate(); resolve({ name: c.name, found:false, error: "workererror: " + e.message }); };
+    w.postMessage({ name: c.name, archiveFile: file, wordlist: c.wordlist });
+  });
+}
+
+(async () => {
+  const results = [];
+  for (const c of CASES) {
+    const r = await runOne(c);
+    const okPw = r.found && r.password === PASSWORD;
+    const okProg = !c.expectProgress || (r.progressTicks >= 3 && r.monotonic);
+    const ok = okPw && okProg;
+    log(`${c.name}: ${okPw ? "CRACKED→"+r.password : "FAIL "+JSON.stringify(r)}`
+        + (c.expectProgress ? `  | progress ticks=${r.progressTicks} lastTried=${r.lastTried} monotonic=${r.monotonic}` : ""));
+    results.push({ name: c.name, ok, ...r });
+  }
+  window.testResults = results;
+  window.testPass = results.every(r => r.ok);
+  window.testDone = true;
+  log("\nALL PASS: " + window.testPass);
+})();
+</script>
+</body>
+</html>
