@@ -1,13 +1,16 @@
 # password-recovery — John the Ripper → WebAssembly
 
 A WebAssembly build of [John the Ripper](https://github.com/openwall/john)
-(jumbo), scoped to **archive password recovery** for **ZIP, RAR and 7z**. It runs
-entirely in Node.js or the browser (Web Worker) with no native binaries.
+(jumbo), scoped to **password recovery** for encrypted **archives (ZIP, RAR, 7z)**,
+Apple **disk images (DMG)**, **PDF** documents, and Microsoft **Office** documents
+(Word, Excel, PowerPoint). It runs entirely in Node.js or the browser (Web Worker)
+with no native binaries.
 
 Recovery uses JtR's standard **two-step flow**:
 
-1. A `*2john` extractor reads the archive header and prints a `$fmt$…` **hash
-   string** (`zip2john`, `rar2john`, `7z2john`).
+1. A `*2john` extractor reads the file header and prints a `$fmt$…` **hash
+   string** (`zip2john`, `rar2john`, `7z2john`, `dmg2john`, `pdf2john`,
+   `office2john`).
 2. `john --wordlist` cracks that hash against a wordlist to recover the password.
 
 Both steps are the **same binary**, selected at load time by `argv[0]`
@@ -15,24 +18,45 @@ Both steps are the **same binary**, selected at load time by `argv[0]`
 
 ### Verified formats
 
-ZipCrypto (`$pkzip$`), WinZip-AES (`$zip2$`), **RAR4** (`$RAR3$` — both `-p`
-data-encrypted and `-hp` header-encrypted modes), **RAR5** (`$rar5$`, including
-solid and header-encrypted), and **7z** (`$7z$`: LZMA1/LZMA2/COPY/BZIP2/DEFLATE,
-plain or LZMA-encoded headers, single and solid multi-file). Out-of-scope inputs
-(header-encrypted 7z `-mhe=on`, BCJ/Delta/PPMD filters, split/SFX archives) fail
-cleanly without crashing.
+**Archives** — ZipCrypto (`$pkzip$`), WinZip-AES (`$zip2$`), **RAR4** (`$RAR3$` —
+both `-p` data-encrypted and `-hp` header-encrypted modes), **RAR5** (`$rar5$`,
+including solid and header-encrypted), and **7z** (`$7z$`:
+LZMA1/LZMA2/COPY/BZIP2/DEFLATE, plain or LZMA-encoded headers, single and solid
+multi-file). Out-of-scope archive inputs (header-encrypted 7z `-mhe=on`,
+BCJ/Delta/PPMD filters, split/SFX archives) fail cleanly without crashing.
+
+**DMG** (`$dmg$` → `--format=dmg`) — Apple encrypted disk images, v1 and v2
+(AES-128 / AES-256, `hdiutil`-created).
+
+**PDF** (`$pdf$` → `--format=PDF`) — the standard security handler: RC4-40/128
+(R2/R3), AES-128 (R4), AES-256 (R6), incremental-update and EncryptMetadata-false
+files. Public-key (`/PubSec`) PDFs fail cleanly.
+
+**Office** (extractor `office2john`) — modern OOXML **Word, Excel and PowerPoint**
+(`.docx` / `.xlsx` / `.pptx`, agile encryption → `$office$`, `--format=Office`;
+2007 / 2010 / 2013) and legacy **Word / Excel** (`.doc` / `.xls`, RC4 →
+`$oldoffice$`, `--format=oldoffice`). All three modern apps share one OOXML/CFB code
+path, validated here by the committed `office-agile-2013.docx` baseline; legacy
+`.doc`/`.xls` are exercised by the optional openwall corpus, and legacy `.ppt` is
+parsed by `office2john` but is fixture-limited (best-effort). XOR-obfuscated Office
+files fail cleanly.
 
 ---
 
 ## Live demo
 
-This build powers the in-browser archive password recovery tools at
+This build powers the in-browser password recovery tools at
 [ezyZip](https://www.ezyzip.com), which run entirely client-side (your files
 never leave your device):
 
 - [Recover ZIP password](https://www.ezyzip.com/recover-zip-password.html)
 - [Recover 7z password](https://www.ezyzip.com/recover-7z-password.html)
 - [Recover RAR password](https://www.ezyzip.com/recover-rar-password.html)
+- [Recover DMG password](https://www.ezyzip.com/recover-dmg-password.html)
+- [Recover PDF password](https://www.ezyzip.com/recover-pdf-password.html)
+- [Recover Word password](https://www.ezyzip.com/recover-word-password.html)
+- [Recover Excel password](https://www.ezyzip.com/recover-excel-password.html)
+- [Recover PowerPoint password](https://www.ezyzip.com/recover-powerpoint-password.html)
 
 ---
 
@@ -55,8 +79,24 @@ For GPL transparency, the modifications made to the vendored JtR tree are:
 - **New file** `john-bleeding-jumbo/src/7z2john.c` — a C port of the upstream
   `run/7z2john.pl` script (emits the `$7z$…` hash; reuses the in-tree LZMA decoder
   for LZMA-encoded headers).
-- **`src/john.c`** — dispatch `argv[0] == "7z2john"` to the C extractor above.
-- **`src/Makefile.in`** — add `7z2john.o` to the build.
+- **New files** `src/pdf2john.c`, `src/office2john.c` (plus `src/ole2.c` /
+  `src/ole2.h`, a minimal read-only OLE2 / CFB reader) — C ports of the upstream
+  `run/pdf2john.py` and `run/office2john.py` scripts, since the WASM build cannot run
+  Python. They do pure parsing and emit the `$pdf$…` / `$office$…` / `$oldoffice$…`
+  hash; all crypto stays in the cracker plugins.
+- **New files** `src/des3_local.c` / `src/des3_local.h` — a compact, KAT-verified,
+  OpenSSL-API-compatible 3DES (DES-EDE3-CBC). The `dmg` format unwraps its key blob
+  with 3DES (v1 and v2); this build configures `--without-openssl`, so it supplies
+  3DES locally (AES / HMAC-SHA1 / PBKDF2 already come from the bundled
+  `aes.h` / `hmac_sha.h`).
+- **`src/dmg_fmt_plug.c`** — un-gate the format from `#if HAVE_LIBCRYPTO` so it
+  builds without libcrypto, using `des3_local.h` for 3DES.
+- **`src/dmg2john.c`** — add an `int dmg2john(int, char**)` entry point for the
+  `argv[0]` dispatch (the native standalone `main()` is kept for non-WASM builds).
+- **`src/john.c`** — dispatch `argv[0]` to the C extractors above (`7z2john`,
+  `dmg2john`, `pdf2john`, `office2john`).
+- **`src/Makefile.in`** — add `7z2john.o`, `dmg2john.o`, `des3_local.o`,
+  `pdf2john.o`, `office2john.o` and `ole2.o` to the build.
 - **`src/status.c`, `src/status.h`, `src/cracker.c`** — a `status_emit_wasm_progress()`
   hook (all guarded by `#ifdef __EMSCRIPTEN__`) that streams live candidate counts
   to JavaScript, because JtR's native `SIGALRM`/`times()`-driven status reporting
@@ -136,13 +176,26 @@ This produces:
 ## Test
 
 ```bash
-node test/test-jtr-node.js                              # NODEFS two-step matrix
+node test/test-jtr-node.js                              # ZIP/RAR/7z NODEFS two-step matrix
+node test/test-jtr-formats-node.js                      # DMG/PDF/Office baseline (committed fixtures)
 node test-nodefs-contract.js output/jtr.js output       # FS/WORKERFS/NODEFS contract
 node test/browser/serve.js 8097                          # browser harness → http://localhost:8097
 ```
 
-The Node and browser harnesses generate their own encrypted fixtures with the
+The archive suite (`test-jtr-node.js`) generates its own encrypted fixtures with the
 native `zip`/`7zz`/`rar` tools; cases whose tool is missing are skipped, not failed.
+The DMG/PDF/Office suite (`test-jtr-formats-node.js`) is anchored on committed,
+license-clean, self-generated fixtures under `test/fixtures/`, each with a golden
+`.hash` sidecar (a missing baseline fixture is a failure, never a silent skip); if
+`pyhanko`/`olefile` are importable it also asserts live byte-parity against the
+reference `run/*2john.py`. Optional real-world legacy/2007 Office samples come from
+the openwall `john-samples` corpus (unlicensed, **not committed**) — run
+`test/fetch-office-corpus.sh` to populate the gitignored `test/fixtures/office-corpus/`.
+The OLE2/CFB reader has its own parity gate against python `olefile`:
+
+```bash
+python3 test/test-ole2-contract.py test/fixtures/office-agile-2013.docx test/fixtures/office-agile-large.docx
+```
 
 ---
 
@@ -165,7 +218,7 @@ const JohnTheRipper = require('./output/jtr.js');
 
 // Step 1 — extract the hash (no config needed)
 const ex = await JohnTheRipper({
-  thisProgram: '/john/zip2john',          // or rar2john / 7z2john
+  thisProgram: '/john/zip2john',          // or rar2john / 7z2john / dmg2john / pdf2john / office2john
   noInitialRun: true,
   print: s => hashOut.push(s),
 });
@@ -219,9 +272,10 @@ A self-contained worker that performs the full two-step might expose:
 
 - **Single-threaded**, no Asyncify, no OPFS — the only output is a short password
   string read from stdout, so memory use is bounded by the decompressor's working
-  set, not by archive size.
+  set, not by input file size.
 - WASM crypto is slower than native; wordlist attacks against modest lists are
-  practical. 7z and RAR5 use heavy PBKDF2 and are slower per candidate — use
-  `maxRunTimeSec` (`john --max-run-time`) to bound long runs.
-- This is a **defensive / recovery** tool: recover the password to an archive you
+  practical. 7z, RAR5, PDF (AES-256/R6) and modern Office (agile) use heavy PBKDF2
+  and are slower per candidate — use `maxRunTimeSec` (`john --max-run-time`) to bound
+  long runs.
+- This is a **defensive / recovery** tool: recover the password to a file you
   own or are authorized to access.

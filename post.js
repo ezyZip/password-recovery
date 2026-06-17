@@ -95,6 +95,11 @@ Module.detectTool = function (filename) {
     if (n.endsWith('.7z')) return '7z2john';
     if (n.endsWith('.rar')) return 'rar2john';
     if (n.endsWith('.zip') || n.endsWith('.zipx')) return 'zip2john';
+    if (n.endsWith('.dmg')) return 'dmg2john';
+    if (n.endsWith('.pdf')) return 'pdf2john';
+    if (n.endsWith('.doc') || n.endsWith('.docx') ||
+        n.endsWith('.xls') || n.endsWith('.xlsx') ||
+        n.endsWith('.ppt') || n.endsWith('.pptx')) return 'office2john';
     // default: zip is the most common; caller may override
     return 'zip2john';
 };
@@ -111,6 +116,10 @@ Module.formatFromHash = function (hashLine) {
     if (s.startsWith('$pkzip$') || s.startsWith('$pkzip2$')) return 'PKZIP'; // ZipCrypto
     if (s.startsWith('$rar5$')) return 'rar5';
     if (s.startsWith('$RAR3$') || s.startsWith('$rar$')) return 'rar';       // RAR3
+    if (s.startsWith('$dmg$')) return 'dmg';
+    if (s.startsWith('$pdf$')) return 'PDF';
+    if (s.startsWith('$office$')) return 'Office';                            // 2007/2010/2013 agile
+    if (s.startsWith('$oldoffice$')) return 'oldoffice';                      // 97-2003 RC4
     return null;
 };
 

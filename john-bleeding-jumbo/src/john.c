@@ -178,6 +178,9 @@ extern int undrop(int argc, char **argv);
 extern int base64conv(int argc, char **argv);
 extern int zip2john(int argc, char **argv);
 extern int sevenzip2john(int argc, char **argv);   /* jtr-wasm: 7z2john C port */
+extern int dmg2john(int argc, char **argv);        /* jtr-wasm: dmg2john argv[0] entry */
+extern int pdf2john(int argc, char **argv);        /* jtr-wasm: pdf2john C port */
+extern int office2john(int argc, char **argv);     /* jtr-wasm: office2john C port */
 extern int gpg2john(int argc, char **argv);
 extern int rar2john(int argc, char **argv);
 
@@ -2101,6 +2104,21 @@ int main(int argc, char **argv)
 	if (!strcmp(name, "7z2john")) {
 		CPU_detect_or_fallback(argv, 0);
 		return sevenzip2john(argc, argv);
+	}
+
+	if (!strcmp(name, "dmg2john")) {
+		CPU_detect_or_fallback(argv, 0);
+		return dmg2john(argc, argv);
+	}
+
+	if (!strcmp(name, "pdf2john")) {
+		CPU_detect_or_fallback(argv, 0);
+		return pdf2john(argc, argv);
+	}
+
+	if (!strcmp(name, "office2john")) {
+		CPU_detect_or_fallback(argv, 0);
+		return office2john(argc, argv);
 	}
 
 	if (!strcmp(name, "base64conv")) {

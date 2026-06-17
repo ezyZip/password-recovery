@@ -37,6 +37,7 @@ john_register_one(&fmt_diskcryptor);
 john_register_one(&fmt_django);
 john_register_one(&fmt_django_scrypt);
 john_register_one(&fmt_DMD5);
+john_register_one(&fmt_dmg);
 john_register_one(&fmt_DOMINOSEC);
 john_register_one(&fmt_DOMINOSEC8);
 john_register_one(&fmt_dragonfly3_32);

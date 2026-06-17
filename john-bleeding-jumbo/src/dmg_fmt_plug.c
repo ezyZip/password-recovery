@@ -45,7 +45,11 @@
 #include "autoconfig.h"
 #endif
 
-#if HAVE_LIBCRYPTO
+/* jtr-wasm: was "#if HAVE_LIBCRYPTO" — the dmg format only needed libcrypto for
+ * 3DES (key-blob unwrap, v1 AND v2). The build is --without-openssl, so we always
+ * build the format and supply 3DES via des3_local.h (below) when libcrypto is
+ * absent. AES/HMAC-SHA1/PBKDF2 already come from the bundled aes.h / hmac_sha.h. */
+#if 1
 
 #if FMT_EXTERNS_H
 extern struct fmt_main fmt_dmg;
@@ -63,7 +67,11 @@ john_register_one(&fmt_dmg);
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/types.h>
+#if HAVE_LIBCRYPTO
 #include <openssl/des.h>
+#else
+#include "des3_local.h"   /* jtr-wasm: OpenSSL-compatible 3DES for no-libcrypto builds */
+#endif
 #ifdef DMG_DEBUG
 #include <sys/file.h>
 #if (!AC_BUILT || HAVE_UNISTD_H) && !_MSC_VER

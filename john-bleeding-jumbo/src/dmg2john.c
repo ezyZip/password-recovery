@@ -487,6 +487,25 @@ bailout:
 	close(fd);
 }
 
+/* jtr-wasm: argv[0]-dispatch entry (always defined). The john binary reaches
+ * dmg2john via Module.thisProgram='/john/dmg2john'; the native standalone main()
+ * below just delegates here. hash_plugin_parse_hash() stays void (prints to stderr
+ * and skips bad input), so success/failure is signalled by whether a "$dmg$" line
+ * was emitted, not by the return code. */
+int dmg2john(int argc, char **argv)
+{
+	int i;
+
+	if (argc < 2) {
+		puts("Usage: dmg2john [DMG files]");
+		return -1;
+	}
+	for (i = 1; i < argc; i++)
+		hash_plugin_parse_hash(argv[i]);
+
+	return 0;
+}
+
 #ifdef HAVE_LIBFUZZER
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
@@ -505,19 +524,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
 	return 0;
 }
-#else
+#elif !defined(__EMSCRIPTEN__)  /* jtr-wasm: WASM (john) link omits this main() */
 int main(int argc, char **argv)
 {
-	int i;
-
-	if (argc < 2) {
-		puts("Usage: dmg2john [DMG files]");
-		return -1;
-	}
-	for (i = 1; i < argc; i++)
-		hash_plugin_parse_hash(argv[i]);
-
-	return 0;
+	return dmg2john(argc, argv);
 }
 #endif  // HAVE_LIBFUZZER
 

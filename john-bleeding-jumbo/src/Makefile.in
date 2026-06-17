@@ -110,6 +110,11 @@ JOHN_OBJS = \
 	rar2john.o \
 	zip2john.o pkzip.o \
 	7z2john.o \
+	dmg2john.o \
+	des3_local.o \
+	pdf2john.o \
+	office2john.o \
+	ole2.o \
 	$(PLUGIN_OBJS) \
 	dyna_salt.o dummy.o \
 	gost.o \

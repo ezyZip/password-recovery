@@ -40,6 +40,12 @@ john-bleeding-jumbo/run/john.log
 john-bleeding-jumbo/run/*.rec
 john-bleeding-jumbo/run/*.ses
 
+# ─── Unlicensed external test corpus (fetched on demand) ─────────────────────
+# Real-world legacy/2007 MS-Office samples from openwall/john-samples, pulled by
+# test/fetch-office-corpus.sh for the optional office corpus phase. john-samples
+# carries no license, so these are never committed.
+test/fixtures/office-corpus/
+
 # ─── OS / editor cruft ───────────────────────────────────────────────────────
 .DS_Store
 *~

@@ -24,9 +24,16 @@ const z = sevenz();
 try { execFileSync(z, ["a","-tzip","-p"+PASSWORD,"-mem=AES256", path.join(fixDir,"aes.zip"), path.join(work,"secret.txt")], {stdio:"ignore"}); } catch(e){}
 try { execFileSync(z, ["a","-p"+PASSWORD,"-m0=lzma2", path.join(fixDir,"m_lzma2.7z"), path.join(work,"secret.txt")], {stdio:"ignore"}); } catch(e){}
 try { execFileSync("rar", ["a","-ep","-p"+PASSWORD, path.join(fixDir,"test.rar"), path.join(work,"secret.txt")], {stdio:"ignore"}); } catch(e){}
+// committed dmg/pdf/office fixtures (password "openwall") for the new-format cases
+const COMMITTED = path.join(ROOT, "test", "fixtures");
+for (const f of ["pdf-rc4-40.pdf", "office-agile-2013.docx", "test-aes256.dmg"]) {
+  try { fs.copyFileSync(path.join(COMMITTED, f), path.join(fixDir, f)); } catch(e){}
+}
 
 const MIME = { ".js":"text/javascript", ".wasm":"application/wasm", ".data":"application/octet-stream",
-  ".html":"text/html", ".zip":"application/zip", ".7z":"application/x-7z-compressed", ".rar":"application/vnd.rar" };
+  ".html":"text/html", ".zip":"application/zip", ".7z":"application/x-7z-compressed", ".rar":"application/vnd.rar",
+  ".pdf":"application/pdf", ".docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".dmg":"application/x-apple-diskimage" };
 
 function serveFile(res, file) {
   if (!fs.existsSync(file)) { res.writeHead(404); res.end("not found: " + file); return; }

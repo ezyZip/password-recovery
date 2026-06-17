@@ -35,6 +35,7 @@ extern struct fmt_main fmt_diskcryptor;
 extern struct fmt_main fmt_django;
 extern struct fmt_main fmt_django_scrypt;
 extern struct fmt_main fmt_DMD5;
+extern struct fmt_main fmt_dmg;
 extern struct fmt_main fmt_DOMINOSEC;
 extern struct fmt_main fmt_DOMINOSEC8;
 extern struct fmt_main fmt_dragonfly3_32;

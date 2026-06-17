@@ -5,13 +5,16 @@
 <h1>jtr-wasm browser test</h1>
 <pre id="log">running…</pre>
 <script>
-const PASSWORD = "hunter2";
-// fast cases (crack near-instantly) + one slow 7z case to observe live progress
-function wl(n){ const a=[]; for(let i=0;i<n;i++) a.push("nope"+i); a.push(PASSWORD); return a.join("\n")+"\n"; }
+// per-case password (archives use hunter2; committed dmg/pdf/office use openwall)
+function wl(n, pw){ const a=[]; for(let i=0;i<n;i++) a.push("nope"+i); a.push(pw); return a.join("\n")+"\n"; }
 const CASES = [
-  { name: "aes.zip",    file: "/fixtures/aes.zip",    wordlist: wl(4),  expectProgress: false },
-  { name: "test.rar",   file: "/fixtures/test.rar",   wordlist: wl(4),  expectProgress: false },
-  { name: "m_lzma2.7z", file: "/fixtures/m_lzma2.7z", wordlist: wl(120), expectProgress: true }, // ~6s @ slow 7z
+  { name: "aes.zip",    file: "/fixtures/aes.zip",    pw: "hunter2",  wordlist: wl(4, "hunter2"),  expectProgress: false },
+  { name: "test.rar",   file: "/fixtures/test.rar",   pw: "hunter2",  wordlist: wl(4, "hunter2"),  expectProgress: false },
+  { name: "m_lzma2.7z", file: "/fixtures/m_lzma2.7z", pw: "hunter2",  wordlist: wl(120, "hunter2"), expectProgress: true }, // ~6s @ slow 7z
+  // new formats via WORKERFS (dmg2john / pdf2john / office2john)
+  { name: "test-aes256.dmg",       file: "/fixtures/test-aes256.dmg",       pw: "openwall", wordlist: wl(4, "openwall"), expectProgress: false },
+  { name: "pdf-rc4-40.pdf",        file: "/fixtures/pdf-rc4-40.pdf",        pw: "openwall", wordlist: wl(4, "openwall"), expectProgress: false },
+  { name: "office-agile-2013.docx",file: "/fixtures/office-agile-2013.docx",pw: "openwall", wordlist: wl(4, "openwall"), expectProgress: false }, // ~few s (agile KDF)
 ];
 const logEl = document.getElementById("log");
 function log(s){ logEl.textContent += "\n" + s; }
@@ -38,7 +41,7 @@ function runOne(c){
   const results = [];
   for (const c of CASES) {
     const r = await runOne(c);
-    const okPw = r.found && r.password === PASSWORD;
+    const okPw = r.found && r.password === c.pw;
     const okProg = !c.expectProgress || (r.progressTicks >= 3 && r.monotonic);
     const ok = okPw && okProg;
     log(`${c.name}: ${okPw ? "CRACKED→"+r.password : "FAIL "+JSON.stringify(r)}`
